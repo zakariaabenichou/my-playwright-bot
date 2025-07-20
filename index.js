@@ -1,7 +1,8 @@
 import express from 'express';
-import { chromium } from 'playwright';
-// Removed node-fetch import as Node.js 18+ has native fetch.
-// If you are using an older Node.js version, keep it.
+// OLD: import { chromium } from 'playwright';
+import { chromium } from 'playwright-extra'; // <-- CHANGE THIS LINE
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'; // <-- ADD THIS LINE
+import 'dotenv/config'; // Make sure this is at the very top for local testing
 
 // --- Environment Variables ---
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -16,6 +17,10 @@ async function runMidjourney() {
     let browser;
     try {
         console.log('Launching browser...');
+        // Use the stealth plugin before launching the browser
+        chromium.use(StealthPlugin()); // <-- ADD THIS LINE
+
+        // *** IMPORTANT: Set headless: true for Render deployment ***
         browser = await chromium.launch({ headless: true });
     } catch (err) {
         console.error('Failed to launch browser:', err);
@@ -42,33 +47,19 @@ async function runMidjourney() {
 
     console.log(`Navigating to Discord channel: https://discord.com/channels/${SERVER_ID}/${CHANNEL_ID}`);
     try {
-        await page.goto(`https://discord.com/channels/${SERVER_ID}/${CHANNEL_ID}`, { waitUntil: 'domcontentloaded', timeout: 60000 }); // Increased timeout
+        await page.goto(`https://discord.com/channels/${SERVER_ID}/${CHANNEL_ID}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
         console.log('Discord page loaded (DOM content).');
 
-        // *** IMPORTANT DEBUGGING STEP ***
-        // Log the current URL to confirm redirection issues.
         console.log('Current page URL after goto:', page.url());
-
-        // Wait for a robust indicator that the Discord UI is ready and authenticated.
-        // This is more reliable than fixed timeouts or just waiting for chat messages.
-        // Look for a known, stable element that appears *after* successful login and channel load.
-        // Examples: The text input box, the channel name header, or a general chat container.
-        const discordUISelector = '[role="textbox"][aria-label="Message"]'; // A common robust selector for the chat input box
-        console.log(`Waiting for Discord UI element: ${discordUISelector}`);
-        await page.waitForSelector(discordUISelector, { timeout: 60000 }); // Wait up to 60 seconds for the UI
-        console.log('Discord UI element found, likely authenticated and loaded.');
-
-        // Take a screenshot for visual debugging (if you can retrieve it later)
-        // For Render, you might need to upload this to a service like Imgur/S3 or convert to base64 and log.
-        // For immediate debugging, just log the content.
-        // await page.screenshot({ path: 'discord_loaded_page.png' });
-        // console.log('Screenshot of loaded Discord page taken (discord_loaded_page.png).');
         console.log('Page title:', await page.title());
-        // console.log('Page content (first 500 chars):\n', (await page.content()).substring(0, 500)); // Log a snippet of HTML
+
+        const discordUISelector = '[role="textbox"][aria-label="Message"]';
+        console.log(`Waiting for Discord UI element: ${discordUISelector}`);
+        await page.waitForSelector(discordUISelector, { timeout: 60000 });
+        console.log('Discord UI element found, likely authenticated and loaded.');
 
     } catch (err) {
         console.error('❌ Failed to load Discord page or find UI element:', err);
-        // Try to get content even if failed to load for more info
         try {
             console.error('Page content on error:', (await page.content()).substring(0, 1000));
         } catch (e) { /* ignore */ }
@@ -79,7 +70,6 @@ async function runMidjourney() {
     const messages = await page.$$('[data-list-item-id^="chat-messages"]');
     if (!messages.length) {
         console.log('No messages found (after UI loaded). This might indicate the selector is outdated or no actual messages are present.');
-        // Consider waiting for one message to appear explicitly if this is a common issue
         try {
              await page.waitForSelector('[data-list-item-id^="chat-messages"]', { timeout: 30000 });
              console.log('Messages container found after explicit wait.');
@@ -103,7 +93,6 @@ async function runMidjourney() {
         prompt = await latest.$eval('[class*="markup"]', el => el.innerText);
     } catch (e) {
         console.error('Could not find prompt element in the latest message (selector [class*="markup"] might be outdated):', e);
-        // Try a more general text extraction if markup fails
         try {
             prompt = await latest.innerText();
             console.log('Attempted innerText for prompt:', prompt);
@@ -122,10 +111,10 @@ async function runMidjourney() {
     console.log(`Processing prompt: "${cleanedPrompt}"`);
 
     try {
-        await page.click('[role="textbox"]'); // Click the chat input
+        await page.click('[role="textbox"]');
         await page.keyboard.type('/imagine');
-        await page.waitForTimeout(3000); // Wait for Discord command suggestions
-        await page.keyboard.press('Enter'); // Select /imagine
+        await page.waitForTimeout(3000);
+        await page.keyboard.press('Enter');
         await page.keyboard.type(' ' + cleanedPrompt);
         await page.keyboard.press('Enter');
         console.log('Prompt sent to Midjourney.');
@@ -137,7 +126,7 @@ async function runMidjourney() {
 
 
     let mjMessage;
-    const timeout = Date.now() + 120000; // 2 minutes timeout for initial reply
+    const timeout = Date.now() + 120000;
 
     while (Date.now() < timeout) {
         const currentMessages = await page.$$('[data-list-item-id^="chat-messages"]');
@@ -154,7 +143,7 @@ async function runMidjourney() {
             break;
         }
         console.log('Waiting for MidJourney reply...');
-        await page.waitForTimeout(5000); // Wait longer before re-checking for messages
+        await page.waitForTimeout(5000);
     }
 
     if (!mjMessage) {
@@ -164,9 +153,8 @@ async function runMidjourney() {
     }
 
     console.log('Waiting for image generation to complete (approx 50 seconds)...');
-    await page.waitForTimeout(50000); // Wait for the image to be fully generated
+    await page.waitForTimeout(50000);
 
-    // Re-fetch messages to get the updated state after 50 seconds
     const updatedMessages = await page.$$('[data-list-item-id^="chat-messages"]');
     let targetMessage = null;
 
@@ -191,7 +179,6 @@ async function runMidjourney() {
         return;
     }
 
-    // Attempt to click U1 button
     const u1Button = await targetMessage.$('button:has-text("U1")');
     if (!u1Button) {
         console.error('❌ U1 button not found for the generated image. This could mean the image is not ready or Discord UI changed.');
@@ -201,7 +188,7 @@ async function runMidjourney() {
 
     await u1Button.click();
     console.log('🖱️ U1 clicked. Waiting for upscale...');
-    await page.waitForTimeout(10000); // Wait for the upscale process
+    await page.waitForTimeout(10000);
 
     const allMessages = await page.$$('[data-list-item-id^="chat-messages"]');
     let upscaleImageUrl = null;
@@ -216,8 +203,8 @@ async function runMidjourney() {
                 src &&
                 src.includes('media.discordapp.net') &&
                 /\.(png|jpe?g|webp)(\?|$)/i.test(src) &&
-                !src.includes('avatars') && // Exclude avatar images
-                !src.includes('attachments') // Exclude small attachment previews if any
+                !src.includes('avatars') &&
+                !src.includes('attachments')
             ) {
                 upscaleImageUrl = src
                     .replace(/([&?])(width|height)=\d+&?/g, '$1')
