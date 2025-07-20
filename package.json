@@ -1,28 +1,20 @@
 {
-  "name": "midjourney-automation",
+  "name": "midjourney-automation-app",
   "version": "1.0.0",
-  "description": "Automates Midjourney image generation via Discord with Playwright.",
+  "description": "",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "start": "node index.js"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "express": "^4.19.2",
-    "playwright": "^1.54.0",
-    "node-fetch": "^3.3.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": [
-    "playwright",
-    "discord",
-    "midjourney",
-    "automation",
-    "web scraping",
-    "render"
-  ],
-  "author": "Zakaria",
-  "license": "MIT"
+    "playwright": "^1.44.1",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "dotenv": "^16.4.5"
+  }
 }
