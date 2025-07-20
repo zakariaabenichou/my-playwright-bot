@@ -1,0 +1,28 @@
+{
+  "name": "midjourney-automation",
+  "version": "1.0.0",
+  "description": "Automates Midjourney image generation via Discord with Playwright.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "playwright": "^1.54.0",
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "playwright",
+    "discord",
+    "midjourney",
+    "automation",
+    "web scraping",
+    "render"
+  ],
+  "author": "Zakaria",
+  "license": "MIT"
+}
