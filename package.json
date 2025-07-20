@@ -14,7 +14,7 @@
     "express": "^4.19.2",
     "playwright": "^1.44.1",
     "playwright-extra": "^4.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.9",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "dotenv": "^16.4.5"
   }
 }
