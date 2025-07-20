@@ -13,8 +13,8 @@
   "dependencies": {
     "express": "^4.19.2",
     "playwright": "^1.44.1",
-    "playwright-extra": "^4.3.6",  
-    "puppeteer-extra-plugin-stealth": "^2.11.9"
-    // "node-fetch": "^3.3.2" // If you're on Node.js 18+ you can remove this
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.9",
+    "dotenv": "^16.4.5" // Make sure dotenv is also here
   }
 }
